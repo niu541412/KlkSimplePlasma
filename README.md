@@ -33,8 +33,9 @@ Build products are written beneath `build/<architecture>/`. GitHub Actions
 builds both architectures independently and attaches both ZIP files to tagged
 releases.
 
-The two preview thumbnails are checked into the repository and copied without
-modification, so their contents are identical across architectures and builds.
+The preview is a checked-in, multi-representation `thumbnail.tiff` containing
+90×58 (1x) and 180×116 (2x) images. It is copied without modification, so its
+contents are identical across architectures and builds.
 
 ## Credits and license
 
