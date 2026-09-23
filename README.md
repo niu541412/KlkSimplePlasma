@@ -4,6 +4,8 @@ A modern Apple Silicon and Intel port of **klk's Simple Plasma**. The original
 Shadertoy algorithm is rendered by Metal inside a native macOS `.saver` bundle;
 the old Vuo and OpenGL runtimes are not required.
 
+![Klk's Simple Plasma preview](Resources/preview.png)
+
 ## Download
 
 Download the package for your Mac from the
