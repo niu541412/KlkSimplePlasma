@@ -19,19 +19,19 @@
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.1</string>
+    <string>1.1.0</string>
     <key>CFBundleSupportedPlatforms</key>
     <array>
         <string>MacOSX</string>
     </array>
     <key>CFBundleVersion</key>
-    <string>2</string>
+    <string>3</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSHumanReadableCopyright</key>
-    <string>Original shader © klk; Metal port © 2026 niu541412. CC BY-NC-SA 3.0.</string>
+    <string>Original shader © klk; macOS port © 2026 niu541412. CC BY-NC-SA 3.0.</string>
     <key>NSPrincipalClass</key>
     <string>KlkSimplePlasmaView</string>
 </dict>

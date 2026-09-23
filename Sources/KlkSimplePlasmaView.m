@@ -1,19 +1,13 @@
 #import <Cocoa/Cocoa.h>
-#import <MetalKit/MetalKit.h>
-#import <QuartzCore/QuartzCore.h>
 #import <ScreenSaver/ScreenSaver.h>
+#import <SpriteKit/SpriteKit.h>
 
-typedef struct {
-    vector_float2 resolution;
-    float time;
-    float padding;
-} PlasmaUniforms;
-
-@interface KlkSimplePlasmaView : ScreenSaverView <MTKViewDelegate>
-@property(nonatomic, strong) MTKView *metalView;
-@property(nonatomic, strong) id<MTLCommandQueue> commandQueue;
-@property(nonatomic, strong) id<MTLRenderPipelineState> pipelineState;
-@property(nonatomic) CFTimeInterval startTime;
+@interface KlkSimplePlasmaView : ScreenSaverView
+@property(nonatomic, strong) SKView *spriteView;
+@property(nonatomic, strong) SKScene *scene;
+@property(nonatomic, strong) SKSpriteNode *plasmaNode;
+@property(nonatomic, strong) SKUniform *aspectUniform;
+- (void)updateSceneLayout;
 @end
 
 @implementation KlkSimplePlasmaView
@@ -26,64 +20,73 @@ typedef struct {
     }
 
     self.animationTimeInterval = 1.0 / 60.0;
-    _startTime = CACurrentMediaTime();
 
-    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
-    if (!device) {
-        NSLog(@"Klk's Simple Plasma: Metal is unavailable.");
-        return self;
-    }
+    _spriteView = [[SKView alloc] initWithFrame:self.bounds];
+    _spriteView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    _spriteView.preferredFramesPerSecond = 60;
+    _spriteView.asynchronous = YES;
+    _spriteView.allowsTransparency = NO;
+    _spriteView.disableDepthStencilBuffer = YES;
+    _spriteView.paused = YES;
+    [self addSubview:_spriteView];
 
-    _metalView = [[MTKView alloc] initWithFrame:self.bounds device:device];
-    _metalView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    _metalView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
-    _metalView.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0);
-    _metalView.framebufferOnly = YES;
-    _metalView.paused = YES;
-    _metalView.enableSetNeedsDisplay = NO;
-    _metalView.delegate = self;
-    [self addSubview:_metalView];
+    _scene = [SKScene sceneWithSize:self.bounds.size];
+    _scene.scaleMode = SKSceneScaleModeResizeFill;
+    _scene.backgroundColor = NSColor.blackColor;
 
-    _commandQueue = [device newCommandQueue];
+    _plasmaNode = [SKSpriteNode spriteNodeWithColor:NSColor.whiteColor size:self.bounds.size];
+    _plasmaNode.anchorPoint = CGPointMake(0.5, 0.5);
+    _plasmaNode.blendMode = SKBlendModeReplace;
+    [_scene addChild:_plasmaNode];
 
     NSBundle *bundle = [NSBundle bundleForClass:self.class];
-    NSURL *libraryURL = [bundle URLForResource:@"Plasma" withExtension:@"metallib"];
+    NSURL *shaderURL = [bundle URLForResource:@"Plasma" withExtension:@"fsh"];
     NSError *error = nil;
-    id<MTLLibrary> library = libraryURL ? [device newLibraryWithURL:libraryURL error:&error] : nil;
-    if (!library) {
-        NSLog(@"Klk's Simple Plasma: could not load Metal library: %@", error);
-        return self;
+    NSString *source = shaderURL ? [NSString stringWithContentsOfURL:shaderURL
+                                                            encoding:NSUTF8StringEncoding
+                                                               error:&error] : nil;
+    if (!source) {
+        NSLog(@"Klk's Simple Plasma: could not load SpriteKit shader: %@", error);
+    } else {
+        _aspectUniform = [SKUniform uniformWithName:@"u_aspect" float:1.0f];
+        _plasmaNode.shader = [SKShader shaderWithSource:source
+                                               uniforms:@[_aspectUniform]];
     }
 
-    MTLRenderPipelineDescriptor *descriptor = [MTLRenderPipelineDescriptor new];
-    descriptor.label = @"Simple Plasma Pipeline";
-    descriptor.vertexFunction = [library newFunctionWithName:@"plasmaVertex"];
-    descriptor.fragmentFunction = [library newFunctionWithName:@"plasmaFragment"];
-    descriptor.colorAttachments[0].pixelFormat = _metalView.colorPixelFormat;
-
-    _pipelineState = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
-    if (!_pipelineState) {
-        NSLog(@"Klk's Simple Plasma: could not create render pipeline: %@", error);
-    }
-
+    [_spriteView presentScene:_scene];
+    [self updateSceneLayout];
     return self;
+}
+
+- (void)updateSceneLayout
+{
+    CGSize size = self.bounds.size;
+    if (size.width <= 0.0 || size.height <= 0.0) {
+        return;
+    }
+
+    self.scene.size = size;
+    self.plasmaNode.size = size;
+    self.plasmaNode.position = CGPointMake(size.width * 0.5, size.height * 0.5);
+    self.aspectUniform.floatValue = (float)(size.height / size.width);
+}
+
+- (void)layout
+{
+    [super layout];
+    [self updateSceneLayout];
 }
 
 - (void)startAnimation
 {
-    self.startTime = CACurrentMediaTime();
+    self.spriteView.paused = NO;
     [super startAnimation];
 }
 
-- (void)animateOneFrame
+- (void)stopAnimation
 {
-    [self.metalView draw];
-}
-
-- (void)drawRect:(NSRect)rect
-{
-    [super drawRect:rect];
-    [self.metalView draw];
+    self.spriteView.paused = YES;
+    [super stopAnimation];
 }
 
 - (BOOL)isOpaque
@@ -94,39 +97,6 @@ typedef struct {
 - (BOOL)hasConfigureSheet
 {
     return NO;
-}
-
-- (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size
-{
-}
-
-- (void)drawInMTKView:(MTKView *)view
-{
-    if (!self.pipelineState || !self.commandQueue || view.drawableSize.width < 1.0 || view.drawableSize.height < 1.0) {
-        return;
-    }
-
-    MTLRenderPassDescriptor *pass = view.currentRenderPassDescriptor;
-    id<CAMetalDrawable> drawable = view.currentDrawable;
-    if (!pass || !drawable) {
-        return;
-    }
-
-    PlasmaUniforms uniforms = {
-        .resolution = {(float)view.drawableSize.width, (float)view.drawableSize.height},
-        .time = (float)(CACurrentMediaTime() - self.startTime),
-        .padding = 0.0f,
-    };
-
-    id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
-    commandBuffer.label = @"Simple Plasma Frame";
-    id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
-    [encoder setRenderPipelineState:self.pipelineState];
-    [encoder setFragmentBytes:&uniforms length:sizeof(uniforms) atIndex:0];
-    [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
-    [encoder endEncoding];
-    [commandBuffer presentDrawable:drawable];
-    [commandBuffer commit];
 }
 
 @end

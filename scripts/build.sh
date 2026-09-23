@@ -14,21 +14,14 @@ BUNDLE_DIR="$BUILD_DIR/$BUNDLE_NAME"
 CONTENTS_DIR="$BUNDLE_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
-INTERMEDIATES_DIR="$BUILD_DIR/Intermediates"
 SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
 
 rm -rf "$BUILD_DIR"
-mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$INTERMEDIATES_DIR"
+mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$ROOT_DIR/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 cp "$ROOT_DIR/Resources/thumbnail.tiff" "$RESOURCES_DIR/thumbnail.tiff"
-
-xcrun --sdk macosx metal \
-    -c "$ROOT_DIR/Sources/Plasma.metal" \
-    -o "$INTERMEDIATES_DIR/Plasma.air"
-xcrun --sdk macosx metallib \
-    "$INTERMEDIATES_DIR/Plasma.air" \
-    -o "$RESOURCES_DIR/Plasma.metallib"
+cp "$ROOT_DIR/Sources/Plasma.fsh" "$RESOURCES_DIR/Plasma.fsh"
 
 xcrun --sdk macosx clang \
     -arch "$ARCHITECTURE" \
@@ -39,10 +32,9 @@ xcrun --sdk macosx clang \
     -Wall -Wextra -Werror \
     -bundle \
     -framework Cocoa \
-    -framework Metal \
-    -framework MetalKit \
     -framework QuartzCore \
     -framework ScreenSaver \
+    -framework SpriteKit \
     "$ROOT_DIR/Sources/KlkSimplePlasmaView.m" \
     -o "$MACOS_DIR/KlkSimplePlasma"
 
