@@ -33,6 +33,9 @@ Build products are written beneath `build/<architecture>/`. GitHub Actions
 builds both architectures independently and attaches both ZIP files to tagged
 releases.
 
+The two preview thumbnails are checked into the repository and copied without
+modification, so their contents are identical across architectures and builds.
+
 ## Credits and license
 
 - Original shader by [klk on Shadertoy](https://www.shadertoy.com/view/XsVSzW)

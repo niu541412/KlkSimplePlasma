@@ -21,6 +21,8 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$INTERMEDIATES_DIR"
 
 cp "$ROOT_DIR/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
+cp "$ROOT_DIR/Resources/thumbnail.png" "$RESOURCES_DIR/thumbnail.png"
+cp "$ROOT_DIR/Resources/thumbnail@2x.png" "$RESOURCES_DIR/thumbnail@2x.png"
 
 xcrun --sdk macosx metal \
     -c "$ROOT_DIR/Sources/Plasma.metal" \
@@ -45,9 +47,8 @@ xcrun --sdk macosx clang \
     "$ROOT_DIR/Sources/KlkSimplePlasmaView.m" \
     -o "$MACOS_DIR/KlkSimplePlasma"
 
-xcrun swift "$ROOT_DIR/Tools/GenerateThumbnail.swift" "$RESOURCES_DIR"
-
 codesign --force --sign - --timestamp=none "$BUNDLE_DIR"
 codesign --verify --deep --strict "$BUNDLE_DIR"
 file "$MACOS_DIR/KlkSimplePlasma"
+shasum -a 256 "$RESOURCES_DIR/thumbnail.png" "$RESOURCES_DIR/thumbnail@2x.png"
 echo "$BUNDLE_DIR"
